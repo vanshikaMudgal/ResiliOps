@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -28,6 +28,10 @@ class Application(Base):
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(300), nullable=True)
+
+    # Phase 4: Self-healing mappings & policies
+    container_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    recovery_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class Deployment(Base):
@@ -72,13 +76,36 @@ class RecoveryAction(Base):
     code: Mapped[str] = mapped_column(String(20), unique=True)  # e.g. REC-88
     incident_id: Mapped[int | None] = mapped_column(ForeignKey("incidents.id"), nullable=True)
     app_id: Mapped[int] = mapped_column(ForeignKey("applications.id"))
-    action: Mapped[str] = mapped_column(String(50))  # Container Restart / Autoscale / Rollback ...
+    action: Mapped[str] = mapped_column(String(50))  # Container Restart / Pod Restart / Autoscale / Rollback
     result: Mapped[str] = mapped_column(String(20))  # success / failed
+
+    # Phase 4 extensions
+    target: Mapped[str | None] = mapped_column(String(100), nullable=True)  # container/pod identifier
+    execution_status: Mapped[str] = mapped_column(String(20), default="SUCCESS")  # PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=1)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     details: Mapped[str] = mapped_column(String(300), default="")
 
     incident: Mapped["Incident | None"] = relationship()
     app: Mapped["Application"] = relationship()
+
+
+class RecoveryPolicy(Base):
+    """Configurable self-healing policies (id=1)."""
+
+    __tablename__ = "recovery_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    auto_recovery_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    allow_restart: Mapped[bool] = mapped_column(Boolean, default=True)
+    allow_rollback: Mapped[bool] = mapped_column(Boolean, default=True)
+    allow_scaling: Mapped[bool] = mapped_column(Boolean, default=True)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    cooldown_seconds: Mapped[int] = mapped_column(Integer, default=60)
 
 
 class Activity(Base):
@@ -108,7 +135,7 @@ class MonitoringLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     level: Mapped[str] = mapped_column(String(10))  # INFO, WARN, ERROR, CRITICAL
-    source: Mapped[str] = mapped_column(String(50))  # health_check, cpu_monitor, memory_monitor, incident_engine
+    source: Mapped[str] = mapped_column(String(50))  # health_check, cpu_monitor, memory_monitor, incident_engine, recovery_engine
     message: Mapped[str] = mapped_column(String(300))
     details: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

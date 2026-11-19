@@ -43,6 +43,8 @@ def app_out(a):
         "consecutiveFailures": a.consecutive_failures or 0,
         "statusCode": a.status_code,
         "errorMessage": a.error_message,
+        "containerName": getattr(a, "container_name", None),
+        "recoveryEnabled": getattr(a, "recovery_enabled", True),
     }
 
 
@@ -81,11 +83,39 @@ def recovery_out(r):
     return {
         "id": r.code,
         "incident": r.incident.code if r.incident else None,
+        "incidentId": r.incident_id,
         "app": r.app.name if r.app else "Unknown",
+        "appId": r.app_id,
         "action": r.action,
         "result": r.result,
+        "target": getattr(r, "target", None),
+        "status": getattr(r, "execution_status", "SUCCESS"),
+        "startedAt": fmt(getattr(r, "started_at", r.created_at)),
+        "completedAt": fmt(getattr(r, "completed_at", None)),
+        "errorMessage": getattr(r, "error_message", None),
+        "attempts": getattr(r, "attempts", 1),
         "time": time_ago(r.created_at),
         "details": r.details,
+    }
+
+
+def policy_out(p):
+    if not p:
+        return {
+            "autoRecoveryEnabled": True,
+            "allowRestart": True,
+            "allowRollback": True,
+            "allowScaling": True,
+            "maxAttempts": 3,
+            "cooldownSeconds": 60,
+        }
+    return {
+        "autoRecoveryEnabled": p.auto_recovery_enabled,
+        "allowRestart": p.allow_restart,
+        "allowRollback": p.allow_rollback,
+        "allowScaling": p.allow_scaling,
+        "maxAttempts": p.max_attempts,
+        "cooldownSeconds": p.cooldown_seconds,
     }
 
 

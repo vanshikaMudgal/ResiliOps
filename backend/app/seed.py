@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from .models import (
     Activity, Application, DetectionSettings, Deployment,
-    Incident, MetricPoint, RecoveryAction, MonitoringLog,
+    Incident, MetricPoint, RecoveryAction, MonitoringLog, RecoveryPolicy,
 )
 
 
@@ -18,18 +18,17 @@ def seed_if_empty(db: Session) -> None:
     if db.scalar(select(func.count(Application.id))) > 0:
         return  # already seeded
 
-    # (name, url, status, cpu, memory, uptime, version, replicas, monitoring, deployed_min_ago, response_ms)
-    # Using local test endpoints for Payment Service & Web Frontend so real live checks succeed out-of-the-box
+    # (name, url, status, cpu, memory, uptime, version, replicas, monitoring, deployed_min_ago, response_ms, container_name)
     apps_data = [
-        ("Payment Service", "http://127.0.0.1:8000/api/test/sample-app/health", "healthy", 42, 61, 99.98, "v2.4.1", 3, True, 120, 18),
-        ("Order API", "http://order-api:8000/health", "degraded", 87, 74, 98.9, "v1.9.0", 4, True, 35, 640),
-        ("Auth Service", "http://127.0.0.1:8000/api/health", "healthy", 28, 45, 99.99, "v3.0.2", 2, True, 1440, 12),
-        ("Notification Worker", "http://notify:8000/health", "down", 0, 0, 94.2, "v1.2.5", 0, True, 180, 0),
-        ("Inventory Service", "http://inventory:8000/health", "healthy", 36, 52, 99.95, "v2.1.0", 2, False, 2880, 96),
-        ("Web Frontend", "http://127.0.0.1:8000/api/health", "healthy", 18, 33, 100, "v5.4.0", 3, True, 300, 15),
+        ("Payment Service", "http://127.0.0.1:8000/api/test/sample-app/health", "healthy", 42, 61, 99.98, "v2.4.1", 3, True, 120, 18, "resiliops-sample-app"),
+        ("Order API", "http://order-api:8000/health", "degraded", 87, 74, 98.9, "v1.9.0", 4, True, 35, 640, "order-api"),
+        ("Auth Service", "http://127.0.0.1:8000/api/health", "healthy", 28, 45, 99.99, "v3.0.2", 2, True, 1440, 12, "auth-svc"),
+        ("Notification Worker", "http://notify:8000/health", "down", 0, 0, 94.2, "v1.2.5", 0, True, 180, 0, "notify"),
+        ("Inventory Service", "http://inventory:8000/health", "healthy", 36, 52, 99.95, "v2.1.0", 2, False, 2880, 96, "inventory-svc"),
+        ("Web Frontend", "http://127.0.0.1:8000/api/health", "healthy", 18, 33, 100, "v5.4.0", 3, True, 300, 15, "frontend-app"),
     ]
     apps = {}
-    for n, url, st, cpu, mem, up, ver, rep, mon, dep_ago, resp in apps_data:
+    for n, url, st, cpu, mem, up, ver, rep, mon, dep_ago, resp, container in apps_data:
         a = Application(
             name=n,
             url=url,
@@ -47,6 +46,8 @@ def seed_if_empty(db: Session) -> None:
             consecutive_failures=5 if st == "down" else 0,
             status_code=200 if st != "down" else 503,
             error_message="Host unreachable" if st == "down" else None,
+            container_name=container,
+            recovery_enabled=True,
         )
         db.add(a)
         apps[n] = a
@@ -101,17 +102,29 @@ def seed_if_empty(db: Session) -> None:
         inc[code] = i
     db.flush()
 
-    # Recovery actions (code, incident, app, action, result, minutes_ago, details)
+    # Recovery actions (code, incident, app, action, result, minutes_ago, details, target, status)
     actions = [
-        ("REC-84", "INC-299", "Auth Service", "Container Restart", "success", 2877, "Container auth-svc restarted"),
-        ("REC-85", "INC-300", "Order API", "Rollback", "success", 1097, "Rolled back v1.8.9 → v1.8.8"),
-        ("REC-86", "INC-301", "Payment Service", "Pod Restart", "success", 657, "Pod payment-svc-7d9f restarted"),
-        ("REC-87", "INC-303", "Order API", "Autoscale", "success", 93, "Replicas scaled 2 → 4"),
-        ("REC-88", "INC-304", "Notification Worker", "Container Restart", "failed", 69, "Restart attempted, container exited with code 1"),
+        ("REC-84", "INC-299", "Auth Service", "Container Restart", "success", 2877, "Container auth-svc restarted", "auth-svc", "SUCCESS"),
+        ("REC-85", "INC-300", "Order API", "Rollback", "success", 1097, "Rolled back v1.8.9 → v1.8.8", "deployment/order-api", "SUCCESS"),
+        ("REC-86", "INC-301", "Payment Service", "Pod Restart", "success", 657, "Pod payment-svc-7d9f restarted", "payment-svc-7d9f", "SUCCESS"),
+        ("REC-87", "INC-303", "Order API", "Autoscale", "success", 93, "Replicas scaled 2 → 4", "deployment/order-api", "SUCCESS"),
+        ("REC-88", "INC-304", "Notification Worker", "Container Restart", "failed", 69, "Restart attempted, container exited with code 1", "notify", "FAILED"),
     ]
-    for code, i, app, action, res, m, details in actions:
-        db.add(RecoveryAction(code=code, incident_id=inc[i].id, app_id=apps[app].id, action=action,
-                              result=res, created_at=ago(m), details=details))
+    for code, i, app, action, res, m, details, target, status in actions:
+        db.add(RecoveryAction(
+            code=code,
+            incident_id=inc[i].id,
+            app_id=apps[app].id,
+            action=action,
+            result=res,
+            created_at=ago(m),
+            started_at=ago(m),
+            completed_at=ago(m - 1),
+            details=details,
+            target=target,
+            execution_status=status,
+            attempts=1,
+        ))
 
     # Activity feed (type, message, minutes_ago)
     for t, msg, m in [
@@ -145,4 +158,16 @@ def seed_if_empty(db: Session) -> None:
 
     if not db.get(DetectionSettings, 1):
         db.add(DetectionSettings(id=1, cpu_threshold=80, memory_threshold=85, failure_threshold=3, interval_seconds=30, response_threshold=500))
+
+    if not db.get(RecoveryPolicy, 1):
+        db.add(RecoveryPolicy(
+            id=1,
+            auto_recovery_enabled=True,
+            allow_restart=True,
+            allow_rollback=True,
+            allow_scaling=True,
+            max_attempts=3,
+            cooldown_seconds=60,
+        ))
+
     db.commit()

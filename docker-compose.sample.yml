@@ -1,0 +1,13 @@
+services:
+  sample-app:
+    build:
+      context: ./sample_app
+      dockerfile: Dockerfile
+    image: resiliops-sample-app:latest
+    container_name: resiliops-sample-app
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - PORT=8000
+
