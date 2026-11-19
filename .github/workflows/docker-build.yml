@@ -1,0 +1,48 @@
+name: ResiliOps Docker Image Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  docker-build:
+    name: Build & Validate Multi-Container Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          docker compose config
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: resiliops-backend:ci
+
+      - name: Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: resiliops-frontend:ci
+
+      - name: Build Sample App Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./sample_app
+          file: ./sample_app/Dockerfile
+          push: false
+          tags: resiliops-sample-app:ci
+

@@ -8,9 +8,7 @@ scrape_configs:
     metrics_path: "/metrics"
     scrape_interval: 5s
     static_configs:
-      # host.docker.internal points to the FastAPI backend running on port 8000
-      - targets: ["host.docker.internal:8000"]
+      - targets: ["backend:8000", "host.docker.internal:8000"]
         labels:
-          environment: "local-dev"
+          environment: "docker-compose"
           platform: "resiliops"
-

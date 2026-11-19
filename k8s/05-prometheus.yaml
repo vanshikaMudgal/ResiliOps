@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: resiliops
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+
+    scrape_configs:
+      - job_name: "resiliops-backend"
+        metrics_path: "/metrics"
+        static_configs:
+          - targets: ["resiliops-backend-svc:8000"]
+            labels:
+              environment: "kubernetes"
+              application: "resiliops-backend"
+
+      - job_name: "resiliops-sample-app"
+        metrics_path: "/health"
+        static_configs:
+          - targets: ["resiliops-sample-app-svc:8000"]
+            labels:
+              environment: "kubernetes"
+              application: "sample-app"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resiliops-prometheus
+  namespace: resiliops
+  labels:
+    app: resiliops-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resiliops-prometheus
+  template:
+    metadata:
+      labels:
+        app: resiliops-prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+          ports:
+            - containerPort: 9090
+              name: web
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/prometheus
+            - name: prometheus-storage
+              mountPath: /prometheus
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-config
+        - name: prometheus-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resiliops-prometheus-svc
+  namespace: resiliops
+spec:
+  type: NodePort
+  selector:
+    app: resiliops-prometheus
+  ports:
+    - name: web
+      port: 9090
+      targetPort: 9090
+      nodePort: 30090
+

@@ -32,3 +32,10 @@ coverage/
 # Local editor tasks and Vite cache
 .vscode/tasks.json
 .vite/
+
+# Terraform local state and plugin cache
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+

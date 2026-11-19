@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resiliops-config
+  namespace: resiliops
+data:
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  DATABASE_URL: "sqlite:////data/resiliops.db"
+  FRONTEND_ORIGIN: "http://localhost:5173"
+  SAMPLE_APP_URL: "http://resiliops-sample-app-svc:8000"
+  LOG_LEVEL: "info"
+
