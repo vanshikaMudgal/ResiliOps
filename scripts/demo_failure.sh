@@ -33,3 +33,4 @@ if [ -n "$LATEST_INCIDENT" ] && [ "$LATEST_INCIDENT" != "null" ]; then
 else
     echo "[-] Note: Check dashboard at http://localhost:5173/incidents"
 fi
+

@@ -176,12 +176,12 @@ flowchart TD
     User -->|Port 3000| GRAFANA[Grafana Dashboard]
     User -->|Port 9090| PROM[Prometheus Server]
 
-    subgraph ResiliOps Platform
+    subgraph ResiliOps_Platform ["ResiliOps Platform"]
         NGINX -->|Reverse Proxy /api| FASTAPI[FastAPI Control Plane]
         FASTAPI -->|Read / Write| SQLITE[(SQLite Datastore)]
-        FASTAPI -->|Docker SDK| SOCK[/var/run/docker.sock/]
+        FASTAPI -->|Docker SDK| SOCK["/var/run/docker.sock"]
         
-        subgraph Engine Services
+        subgraph Engine_Services ["Engine Services"]
             MONITOR[Health Prober]
             DETECTOR[Failure Detector]
             HEALER[Self-Healing Engine]
@@ -192,7 +192,7 @@ flowchart TD
         FASTAPI --- HEALER
     end
 
-    subgraph Managed Infrastructure
+    subgraph Managed_Infrastructure ["Managed Infrastructure"]
         SOCK -.->|Restart / Inspect| DOCKER_CONTAINER[resiliops-sample-app]
         SOCK -.->|Terraform IaC| TF_CONTAINER[resiliops_tf_demo_app]
     end

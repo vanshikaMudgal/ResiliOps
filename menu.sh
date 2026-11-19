@@ -88,3 +88,4 @@ while true; do
     read -rp "Press [Enter] to return to the menu..." DUMMY
     clear_screen
 done
+

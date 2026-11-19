@@ -93,12 +93,12 @@ flowchart TD
     User -->|Port 3000| GRAF[Grafana Telemetry Dashboard]
     User -->|Port 9090| PROM[Prometheus Scraper UI]
 
-    subgraph ResiliOps Platform Network (resiliops-network)
+    subgraph ResiliOps_Network ["ResiliOps Platform Network (resiliops-network)"]
         FE -->|Reverse Proxy /api/ and /metrics| BE[FastAPI Backend Control Plane]
         BE -->|ACID Transactions| DB[(Persistent SQLite Volume)]
-        BE -->|UNIX Socket| SOCK[/var/run/docker.sock/]
+        BE -->|UNIX Socket| SOCK["/var/run/docker.sock"]
         
-        subgraph Engine Subsystems
+        subgraph Engine_Subsystems ["Engine Subsystems"]
             PROBER[Health Prober]
             DETECTOR[Failure Detector]
             RECOVERY[Self-Healing Engine]
@@ -109,9 +109,9 @@ flowchart TD
         BE --- RECOVERY
     end
 
-    subgraph Managed Infrastructure
-        SOCK -.->|Restart Container| TARGET[resiliops-sample-app :8001]
-        SOCK -.->|Terraform IaC| TF_APP[resiliops_tf_demo_app :8085]
+    subgraph Managed_Infrastructure ["Managed Infrastructure"]
+        SOCK -.->|Restart Container| TARGET["resiliops-sample-app :8001"]
+        SOCK -.->|Terraform IaC| TF_APP["resiliops_tf_demo_app :8085"]
     end
 
     PROM -->|Scrape /metrics every 5s| BE
