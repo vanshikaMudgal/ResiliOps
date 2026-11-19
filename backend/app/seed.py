@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from .models import (
     Activity, Application, DetectionSettings, Deployment,
-    Incident, MetricPoint, RecoveryAction,
+    Incident, MetricPoint, RecoveryAction, MonitoringLog,
 )
 
 
@@ -19,18 +19,35 @@ def seed_if_empty(db: Session) -> None:
         return  # already seeded
 
     # (name, url, status, cpu, memory, uptime, version, replicas, monitoring, deployed_min_ago, response_ms)
+    # Using local test endpoints for Payment Service & Web Frontend so real live checks succeed out-of-the-box
     apps_data = [
-        ("Payment Service", "http://payment-svc:8000/health", "healthy", 42, 61, 99.98, "v2.4.1", 3, True, 120, 118),
+        ("Payment Service", "http://127.0.0.1:8000/api/test/sample-app/health", "healthy", 42, 61, 99.98, "v2.4.1", 3, True, 120, 18),
         ("Order API", "http://order-api:8000/health", "degraded", 87, 74, 98.9, "v1.9.0", 4, True, 35, 640),
-        ("Auth Service", "http://auth-svc:8000/health", "healthy", 28, 45, 99.99, "v3.0.2", 2, True, 1440, 74),
+        ("Auth Service", "http://127.0.0.1:8000/api/health", "healthy", 28, 45, 99.99, "v3.0.2", 2, True, 1440, 12),
         ("Notification Worker", "http://notify:8000/health", "down", 0, 0, 94.2, "v1.2.5", 0, True, 180, 0),
         ("Inventory Service", "http://inventory:8000/health", "healthy", 36, 52, 99.95, "v2.1.0", 2, False, 2880, 96),
-        ("Web Frontend", "http://frontend:80/", "healthy", 18, 33, 100, "v5.4.0", 3, True, 300, 45),
+        ("Web Frontend", "http://127.0.0.1:8000/api/health", "healthy", 18, 33, 100, "v5.4.0", 3, True, 300, 15),
     ]
     apps = {}
     for n, url, st, cpu, mem, up, ver, rep, mon, dep_ago, resp in apps_data:
-        a = Application(name=n, url=url, status=st, cpu=cpu, memory=mem, uptime=up, version=ver,
-                        replicas=rep, monitoring=mon, last_deploy_at=ago(dep_ago), response_ms=resp)
+        a = Application(
+            name=n,
+            url=url,
+            status=st,
+            cpu=cpu,
+            memory=mem,
+            uptime=up,
+            version=ver,
+            replicas=rep,
+            monitoring=mon,
+            last_deploy_at=ago(dep_ago),
+            response_ms=resp,
+            last_check_at=ago(1),
+            last_success_at=ago(1) if st != "down" else ago(180),
+            consecutive_failures=5 if st == "down" else 0,
+            status_code=200 if st != "down" else 503,
+            error_message="Host unreachable" if st == "down" else None,
+        )
         db.add(a)
         apps[n] = a
     db.flush()  # assigns ids
@@ -69,8 +86,17 @@ def seed_if_empty(db: Session) -> None:
     inc = {}
     for code, title, app, sev, st, m, res, cause in incidents:
         detected = ago(m)
-        i = Incident(code=code, title=title, app_id=apps[app].id, severity=sev, status=st,
-                     detected_at=detected, resolved_at=detected + timedelta(minutes=res) if res else None, cause=cause)
+        i = Incident(
+            code=code,
+            title=title,
+            app_id=apps[app].id,
+            incident_type="downtime" if "down" in title.lower() else "high_cpu" if "cpu" in title.lower() else "latency",
+            severity=sev,
+            status=st,
+            detected_at=detected,
+            resolved_at=detected + timedelta(minutes=res) if res else None,
+            cause=cause,
+        )
         db.add(i)
         inc[code] = i
     db.flush()
@@ -98,7 +124,17 @@ def seed_if_empty(db: Session) -> None:
     ]:
         db.add(Activity(type=t, message=msg, created_at=ago(m)))
 
-    # Sample metric time-series (same formula as the Phase 1 chart)
+    # Initial monitoring audit logs
+    for lvl, src, msg, dt, m in [
+        ("INFO", "health_check", "Health check passed for Payment Service (HTTP 200, 18ms)", "Status: 200 OK", 5),
+        ("INFO", "health_check", "Health check passed for Auth Service (HTTP 200, 12ms)", "Status: 200 OK", 5),
+        ("WARN", "failure_detector", "Slow response time observed on Order API (640ms)", "Threshold: 500ms", 10),
+        ("ERROR", "health_check", "Health check failed for Notification Worker", "Host unreachable (5 consecutive failures)", 70),
+        ("CRITICAL", "failure_detector", "[INC-304] Application down: Notification Worker", "Health check failed 5 consecutive times", 70),
+    ]:
+        db.add(MonitoringLog(level=lvl, source=src, message=msg, details=dt, created_at=ago(m)))
+
+    # Sample metric time-series
     for i in range(20):
         db.add(MetricPoint(
             label=f"{9 + (i * 3) // 60:02d}:{(i * 3) % 60:02d}",
@@ -107,5 +143,6 @@ def seed_if_empty(db: Session) -> None:
             response=130 + 40 * math.sin(i / 1.7) + (320 if i > 13 else 0),
         ))
 
-    db.add(DetectionSettings(id=1, cpu_threshold=80, memory_threshold=85, failure_threshold=3, interval_seconds=30))
+    if not db.get(DetectionSettings, 1):
+        db.add(DetectionSettings(id=1, cpu_threshold=80, memory_threshold=85, failure_threshold=3, interval_seconds=30, response_threshold=500))
     db.commit()

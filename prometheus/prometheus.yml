@@ -1,0 +1,16 @@
+# ResiliOps - Prometheus Monitoring Configuration
+global:
+  scrape_interval: 5s       # Scrape metrics every 5 seconds for responsive college demo
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "resiliops-backend"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    static_configs:
+      # host.docker.internal points to the FastAPI backend running on port 8000
+      - targets: ["host.docker.internal:8000"]
+        labels:
+          environment: "local-dev"
+          platform: "resiliops"
+

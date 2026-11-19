@@ -12,7 +12,7 @@ class Application(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     url: Mapped[str] = mapped_column(String(300))
-    status: Mapped[str] = mapped_column(String(20), default="unknown")
+    status: Mapped[str] = mapped_column(String(20), default="unknown")  # healthy / degraded / down / unknown
     cpu: Mapped[float] = mapped_column(Float, default=0)
     memory: Mapped[float] = mapped_column(Float, default=0)
     uptime: Mapped[float] = mapped_column(Float, default=100)
@@ -21,6 +21,13 @@ class Application(Base):
     monitoring: Mapped[bool] = mapped_column(default=True)
     response_ms: Mapped[int] = mapped_column(Integer, default=0)
     last_deploy_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Phase 3: Health monitoring details
+    last_check_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 
 class Deployment(Base):
@@ -48,6 +55,7 @@ class Incident(Base):
     code: Mapped[str] = mapped_column(String(20), unique=True)  # e.g. INC-304
     title: Mapped[str] = mapped_column(String(200))
     app_id: Mapped[int] = mapped_column(ForeignKey("applications.id"))
+    incident_type: Mapped[str] = mapped_column(String(50), default="unknown")  # downtime / cpu / memory / latency / repeated_failures
     severity: Mapped[str] = mapped_column(String(20))  # low / medium / high / critical
     status: Mapped[str] = mapped_column(String(20))  # open / investigating / resolved
     detected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
@@ -90,6 +98,20 @@ class MetricPoint(Base):
     cpu: Mapped[float] = mapped_column(Float)
     memory: Mapped[float] = mapped_column(Float)
     response: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class MonitoringLog(Base):
+    """Event log for monitoring events, health-check outcomes, and detected anomalies."""
+
+    __tablename__ = "monitoring_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    level: Mapped[str] = mapped_column(String(10))  # INFO, WARN, ERROR, CRITICAL
+    source: Mapped[str] = mapped_column(String(50))  # health_check, cpu_monitor, memory_monitor, incident_engine
+    message: Mapped[str] = mapped_column(String(300))
+    details: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
 class DetectionSettings(Base):
@@ -102,3 +124,4 @@ class DetectionSettings(Base):
     memory_threshold: Mapped[int] = mapped_column(Integer, default=85)
     failure_threshold: Mapped[int] = mapped_column(Integer, default=3)
     interval_seconds: Mapped[int] = mapped_column(Integer, default=30)
+    response_threshold: Mapped[int] = mapped_column(Integer, default=500)  # ms latency
