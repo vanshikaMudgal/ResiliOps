@@ -417,3 +417,4 @@ The ResiliOps project successfully demonstrates a fully functional, cloud-native
 5. **Grafana Dashboards:** Grafana Labs, "Grafana Dashboards and Provisioning Documentation," https://grafana.com/docs/grafana/latest/
 6. **Terraform Docker Provider:** Kreuzwerker, "Terraform Provider for Docker Engine," https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs
 7. **Kubernetes Architecture:** Cloud Native Computing Foundation, "Kubernetes Concepts and Workloads," https://kubernetes.io/docs/concepts/
+

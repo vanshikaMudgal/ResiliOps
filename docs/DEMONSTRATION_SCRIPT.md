@@ -14,13 +14,19 @@ Open your terminal in the project directory:
 cd /home/blaze/vs-code/ResiliOps
 ```
 
-1. **Verify Docker Daemon is Running:**
+> [!TIP]
+> **Zero-Command Execution:** You don't have to type individual commands! Simply run:
+> ```bash
+> ./menu.sh
+> ```
+> and use the numbered options (`1` to start, `2` for status, `4` to crash, `5` to heal, `8` to open dashboard).
+>
+> If you prefer manual commands or the examiner asks you to show the terminal directly, follow the step-by-step commands below:
+
+1. **Verify Docker Daemon & Start Platform:**
    ```bash
-   DOCKER_HOST=unix:///var/run/docker.sock docker ps
-   ```
-2. **Start the Complete Platform:**
-   ```bash
-   DOCKER_HOST=unix:///var/run/docker.sock docker compose up -d
+   ./scripts/start.sh
+   # (Or: docker compose up -d)
    ```
 3. **Open Browser Tabs in Order:**
    - **Tab 1 (Main Dashboard):** `http://localhost:5173`
@@ -180,3 +186,4 @@ docker compose up -d
 ## 4. Quick Summary for Final Closing Statement
 
 > *"In conclusion, ResiliOps provides an autonomous, full-cycle DevOps automation and self-healing platform. It reduces Mean Time to Recovery (MTTR) from minutes to under 3 seconds, prevents alert fatigue through duplicate incident suppression, enforces safety limits on autoscaling, and demonstrates modern cloud-native practices using Docker, Kubernetes, Terraform, Prometheus, and Grafana on local hardware without paid cloud subscriptions. Thank you, and I am now open to your questions."*
+

@@ -245,7 +245,26 @@ DOCKER_HOST=unix:///var/run/docker.sock
 
 ## 13. Running the Project with Docker Compose (Recommended)
 
-Start all 5 containers with a single command:
+### One-Click Interactive Examination Menu (Zero Commands to Remember!)
+We provide an interactive terminal menu so you can run the entire demonstration without memorizing any CLI syntax:
+```bash
+./menu.sh
+```
+This opens a clean, numbered menu where you simply press a number:
+- `1` to Start the entire multi-container platform
+- `2` to Check status & live URLs
+- `3` to Run automated Pytest unit tests
+- `4` to Simulate microservice failure
+- `5` to Trigger autonomous self-healing container recovery
+- `6` to Demonstrate deployment rollback
+- `7` to Run local Terraform IaC (apply & clean teardown)
+- `8` to Open the dashboard in your browser
+- `9` to Stop the platform gracefully
+
+---
+
+### Manual Docker Compose Execution
+Start all 5 containers directly:
 ```bash
 docker compose up -d --build
 ```
@@ -411,3 +430,4 @@ backend/tests/test_api.py::test_incidents_listing PASSED                 [100%]
 - **Candidate:** [Student Name] ([Enrollment Number])
 - **Supervisor:** [Faculty Guide Name]
 - **Documentation:** See `docs/PROJECT_REPORT.md`, `docs/PRESENTATION.md`, and `docs/VIVA_PREPARATION.md`.
+

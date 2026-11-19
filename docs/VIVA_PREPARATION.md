@@ -214,3 +214,4 @@
   2. *AIOps:* Use Holt-Winters or Prophet models to detect abnormal latency spikes without relying on static thresholds.
   3. *Distributed Tracing:* Trace request spans across microservice boundaries using OpenTelemetry and Jaeger to pinpoint the exact failing function.
   4. *Multi-Cluster Cloud Mesh:* Connect to managed cloud clusters (EKS/GKE) using safe ServiceAccount credentials.
+

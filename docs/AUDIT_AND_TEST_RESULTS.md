@@ -161,3 +161,4 @@ The ResiliOps platform was systematically audited across all 6 development phase
    When Minikube is not running, the system gracefully shifts into an honest "Academic Demonstration Mode" rather than throwing uncaught errors or falsely claiming live cluster connections.
 3. **Database Architecture:**  
    SQLite is utilized with WAL mode for lightweight college evaluation without requiring heavy database server overhead (like PostgreSQL or MySQL).
+
