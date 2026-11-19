@@ -1,5 +1,18 @@
+import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
+from backend.app.database import engine, Base, SessionLocal
+from backend.app.seed import seed_if_empty
+
+
+@pytest.fixture(scope="session", autouse=True)
+def init_test_db():
+    """Ensure database schema and initial seed data exist before running tests."""
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        seed_if_empty(db)
+    yield
+
 
 client = TestClient(app)
 
