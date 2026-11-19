@@ -1,0 +1,29 @@
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# JavaScript dependencies and build output
+**/node_modules/
+**/dist/
+
+# Python environments, bytecode, and test/tool caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local logs and coverage output
+*.log
+coverage/
+
+# Vite cache
+.vite/
