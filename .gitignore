@@ -27,3 +27,7 @@ coverage/
 
 # Vite cache
 .vite/
+
+# Local editor tasks and Vite cache
+.vscode/tasks.json
+.vite/
